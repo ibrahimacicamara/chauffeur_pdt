@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == 'YGE0x3Im8XUtmxWBtD740mszQ3B2';
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if isAdmin() || request.auth != null;
+    }
+  }
+}

@@ -1,0 +1,581 @@
+﻿{
+  "status": "success",
+  "result": [
+    {
+      "platform": "gcfv2",
+      "id": "cancelStripeCartCheckout",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "cancelStripeCartCheckout",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "cancelStripeCartCheckout/function-source.zip",
+          "generation": "1792662101374427"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "https://gestion-bmr.web.app",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/cancelStripeCartCheckout",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "cancelStripeCartCheckout",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/cancelStripeCartCheckout",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+        "deployment-tool": "cli-firebase"
+      },
+      "runServiceId": "cancelstripecartcheckout",
+      "codebase": "default",
+      "hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "cancelStripeCheckout",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "cancelStripeCheckout",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "cancelStripeCheckout/function-source.zip",
+          "generation": "1792662101318675"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "https://gestion-bmr.web.app",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/cancelStripeCheckout",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "cancelStripeCheckout",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/cancelStripeCheckout",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "firebase-functions-hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true"
+      },
+      "runServiceId": "cancelstripecheckout",
+      "codebase": "default",
+      "hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "confirmStripeCartPayment",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "confirmStripeCartPayment",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "confirmStripeCartPayment/function-source.zip",
+          "generation": "1792662103618267"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "https://gestion-bmr.web.app",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/confirmStripeCartPayment",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "confirmStripeCartPayment",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/confirmStripeCartPayment",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045"
+      },
+      "runServiceId": "confirmstripecartpayment",
+      "codebase": "default",
+      "hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "confirmStripePayment",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "confirmStripePayment",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "confirmStripePayment/function-source.zip",
+          "generation": "1792662103036791"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "https://gestion-bmr.web.app",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/confirmStripePayment",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "confirmStripePayment",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/confirmStripePayment",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045"
+      },
+      "runServiceId": "confirmstripepayment",
+      "codebase": "default",
+      "hash": "bd40fb9ab9d7e5db25358d1dfbc5b6d7f95ff045",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "createStripeCartCheckout",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "createStripeCartCheckout",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "createStripeCartCheckout/function-source.zip",
+          "generation": "1792787901786738"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "http://localhost:58628",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/createStripeCartCheckout",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "createStripeCartCheckout",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        },
+        {
+          "key": "OPENROUTESERVICE_API_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "OPENROUTESERVICE_API_KEY",
+          "version": "1"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/createStripeCartCheckout",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "90fec204106e2750e4a70bc9a60f044540c88c17"
+      },
+      "runServiceId": "createstripecartcheckout",
+      "codebase": "default",
+      "hash": "90fec204106e2750e4a70bc9a60f044540c88c17",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "createStripeCheckout",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "createStripeCheckout",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "createStripeCheckout/function-source.zip",
+          "generation": "1792787901790710"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "http://localhost:58628",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/createStripeCheckout",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "createStripeCheckout",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "STRIPE_SECRET_KEY",
+          "version": "3"
+        },
+        {
+          "key": "OPENROUTESERVICE_API_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "OPENROUTESERVICE_API_KEY",
+          "version": "1"
+        }
+      ],
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/createStripeCheckout",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "90fec204106e2750e4a70bc9a60f044540c88c17",
+        "deployment-tool": "cli-firebase"
+      },
+      "runServiceId": "createstripecheckout",
+      "codebase": "default",
+      "hash": "90fec204106e2750e4a70bc9a60f044540c88c17",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "createTabletPairingCode",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "createTabletPairingCode",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "createTabletPairingCode/function-source.zip",
+          "generation": "1792942754106409"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/createTabletPairingCode",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "createTabletPairingCode",
+        "LOG_EXECUTION_ID": "true"
+      },
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/createTabletPairingCode",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "concurrency": 80,
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-codebase": "chauffeur-reminders",
+        "firebase-functions-hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42"
+      },
+      "runServiceId": "createtabletpairingcode",
+      "codebase": "chauffeur-reminders",
+      "hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "getTripDistance",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "getTripDistance",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "getTripDistance/function-source.zip",
+          "generation": "1792787844141902"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "APP_BASE_URL": "http://localhost:58628",
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/getTripDistance",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "getTripDistance",
+        "LOG_EXECUTION_ID": "true"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "OPENROUTESERVICE_API_KEY",
+          "projectId": "gestion-bmr",
+          "secret": "OPENROUTESERVICE_API_KEY",
+          "version": "1"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/getTripDistance",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "maxInstances": 20,
+      "concurrency": 80,
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "8ea77800c37524e7bec5b7f9179b68b274e569ee",
+        "deployment-tool": "cli-firebase"
+      },
+      "runServiceId": "gettripdistance",
+      "codebase": "default",
+      "hash": "8ea77800c37524e7bec5b7f9179b68b274e569ee",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "redeemTabletPairingCode",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "redeemTabletPairingCode",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "redeemTabletPairingCode/function-source.zip",
+          "generation": "1792942831574778"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/redeemTabletPairingCode",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "redeemTabletPairingCode",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/redeemTabletPairingCode",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "concurrency": 80,
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-codebase": "chauffeur-reminders",
+        "firebase-functions-hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42",
+        "deployment-tool": "cli-firebase"
+      },
+      "runServiceId": "redeemtabletpairingcode",
+      "codebase": "chauffeur-reminders",
+      "hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "registerDriverPushToken",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "registerDriverPushToken",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "registerDriverPushToken/function-source.zip",
+          "generation": "1792950352532879"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/registerDriverPushToken",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "registerDriverPushToken",
+        "LOG_EXECUTION_ID": "true"
+      },
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/registerDriverPushToken",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "concurrency": 80,
+      "labels": {
+        "firebase-functions-codebase": "chauffeur-reminders",
+        "firebase-functions-hash": "af2c4a295bd154814355e6451a86a5b2a1883ff4",
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true"
+      },
+      "runServiceId": "registerdriverpushtoken",
+      "codebase": "chauffeur-reminders",
+      "hash": "af2c4a295bd154814355e6451a86a5b2a1883ff4",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "revokeTablet",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "revokeTablet",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "revokeTablet/function-source.zip",
+          "generation": "1792942831715665"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/revokeTablet",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "revokeTablet",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/revokeTablet",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "concurrency": 80,
+      "labels": {
+        "firebase-functions-codebase": "chauffeur-reminders",
+        "firebase-functions-hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42",
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true"
+      },
+      "runServiceId": "revoketablet",
+      "codebase": "chauffeur-reminders",
+      "hash": "9a5d32223d1fb25bc6a91720b592f5b98829aa42",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv2",
+      "id": "unregisterDriverPushToken",
+      "project": "gestion-bmr",
+      "region": "europe-west1",
+      "callableTrigger": {},
+      "entryPoint": "unregisterDriverPushToken",
+      "runtime": "nodejs22",
+      "source": {
+        "storageSource": {
+          "bucket": "gcf-v2-sources-653739671561-europe-west1",
+          "object": "unregisterDriverPushToken/function-source.zip",
+          "generation": "1792950399862922"
+        }
+      },
+      "ingressSettings": "ALLOW_ALL",
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"gestion-bmr\",\"storageBucket\":\"gestion-bmr.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "gestion-bmr",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/gestion-bmr/locations/europe-west1/services/unregisterDriverPushToken",
+        "FUNCTION_REGION": "europe-west1",
+        "FUNCTION_TARGET": "unregisterDriverPushToken",
+        "LOG_EXECUTION_ID": "true",
+        "FUNCTION_SIGNATURE_TYPE": "http"
+      },
+      "timeoutSeconds": 60,
+      "uri": "https://europe-west1-gestion-bmr.cloudfunctions.net/unregisterDriverPushToken",
+      "serviceAccount": "653739671561-compute@developer.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "cpu": 1,
+      "concurrency": 80,
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-codebase": "chauffeur-reminders",
+        "firebase-functions-hash": "af2c4a295bd154814355e6451a86a5b2a1883ff4"
+      },
+      "runServiceId": "unregisterdriverpushtoken",
+      "codebase": "chauffeur-reminders",
+      "hash": "af2c4a295bd154814355e6451a86a5b2a1883ff4",
+      "state": "ACTIVE"
+    }
+  ]
+}

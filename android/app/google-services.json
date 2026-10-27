@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "653739671561",
+    "project_id": "gestion-bmr",
+    "storage_bucket": "gestion-bmr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653739671561:android:120921ec6d0363a78278d8",
+        "android_client_info": {
+          "package_name": "com.example.bmr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAFa6_UfoM4c80wjXVKVIupdaCTiZAuWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653739671561:android:26a969fc232412c98278d8",
+        "android_client_info": {
+          "package_name": "com.example.chauffeur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAFa6_UfoM4c80wjXVKVIupdaCTiZAuWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653739671561:android:318b9b8e598beb468278d8",
+        "android_client_info": {
+          "package_name": "com.example.client_produtransport"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAFa6_UfoM4c80wjXVKVIupdaCTiZAuWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

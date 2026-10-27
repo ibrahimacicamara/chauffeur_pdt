@@ -1,0 +1,10 @@
+{
+  "emulators": {
+    "firestore": { "port": 8197, "websocketPort": 9167 },
+    "hub": { "port": 4417 },
+    "logging": { "port": 4517 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  },
+  "firestore": { "rules": "firestore.rules" }
+}
