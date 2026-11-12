@@ -50,3 +50,4 @@ app.*.map.json
 functions/node_modules/
 functions/.env*
 functions/.secret.local
+node_modules

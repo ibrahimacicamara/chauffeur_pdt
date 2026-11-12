@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:chauffeur/services/firebase/driver_profile_service.dart';
 import 'package:chauffeur/services/hive/hive_database.dart';
+import 'package:chauffeur/widgets/delete_account_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -93,8 +96,45 @@ class _DriverProfileGateState extends State<DriverProfileGate> {
                   _profile = Future.value(driver);
                 }),
               ),
+        bottomNavigationBar: snapshot.hasError
+            ? null
+            : const SafeArea(
+                minimum: EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: DeleteAccountButton(),
+              ),
       );
     },
+  );
+}
+
+class DriverProfileEditPage extends StatelessWidget {
+  const DriverProfileEditPage({
+    super.key,
+    required this.driverId,
+    required this.driver,
+    required this.service,
+  });
+
+  final String driverId;
+  final MyDriver driver;
+  final DriverProfileService service;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Modifier mon profil')),
+    body: SafeArea(
+      child: _DriverProfileForm(
+        driverId: driverId,
+        service: service,
+        existing: driver,
+        onSaved: (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profil mis à jour.')),
+          );
+          Navigator.of(context).pop();
+        },
+      ),
+    ),
   );
 }
 
@@ -103,6 +143,7 @@ class _DriverProfileForm extends StatefulWidget {
     required this.driverId,
     required this.service,
     required this.onSaved,
+    this.existing,
     this.initialName,
     this.initialPhone,
   });
@@ -110,6 +151,7 @@ class _DriverProfileForm extends StatefulWidget {
   final String driverId;
   final DriverProfileService service;
   final ValueChanged<MyDriver> onSaved;
+  final MyDriver? existing;
   final String? initialName;
   final String? initialPhone;
 
@@ -119,10 +161,16 @@ class _DriverProfileForm extends StatefulWidget {
 
 class _DriverProfileFormState extends State<_DriverProfileForm> {
   final _form = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.initialName);
-  late final _phone = TextEditingController(text: widget.initialPhone);
-  final _car = TextEditingController();
-  final _licensePlate = TextEditingController();
+  late final _name = TextEditingController(
+    text: widget.existing?.name ?? widget.initialName,
+  );
+  late final _phone = TextEditingController(
+    text: widget.existing?.phone ?? widget.initialPhone,
+  );
+  late final _car = TextEditingController(text: widget.existing?.car);
+  late final _licensePlate = TextEditingController(
+    text: widget.existing?.licensePlate,
+  );
   late Future<List<String>> _carNames;
   bool _busy = false;
   String? _error;
@@ -150,14 +198,34 @@ class _DriverProfileFormState extends State<_DriverProfileForm> {
       _error = null;
     });
     try {
-      final driver = await widget.service.createProfile(
-        widget.driverId,
-        name: _name.text,
-        phone: _phone.text,
-        car: _car.text,
-        licensePlate: _licensePlate.text,
-      );
+      final existing = widget.existing;
+      final driver = existing == null
+          ? await widget.service.createProfile(
+              widget.driverId,
+              name: _name.text,
+              phone: _phone.text,
+              car: _car.text,
+              licensePlate: _licensePlate.text,
+            )
+          // Hors ligne, Firestore met l'écriture en file sans jamais répondre.
+          : await widget.service
+                .updateProfile(
+                  widget.driverId,
+                  existing,
+                  name: _name.text,
+                  phone: _phone.text,
+                  car: _car.text,
+                  licensePlate: _licensePlate.text,
+                )
+                .timeout(const Duration(seconds: 15));
       if (mounted) widget.onSaved(driver);
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(
+        () => _error =
+            'Pas de réponse du serveur. Vos modifications seront envoyées '
+            'au retour de la connexion.',
+      );
     } on FirebaseException catch (error) {
       if (!mounted) return;
       setState(
@@ -182,11 +250,13 @@ class _DriverProfileFormState extends State<_DriverProfileForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Complétez votre profil',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              if (widget.existing == null) ...[
+                const Text(
+                  'Complétez votre profil',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+              ],
               TextFormField(
                 key: const ValueKey('driver-name'),
                 controller: _name,
@@ -328,8 +398,10 @@ class _DriverProfileFormState extends State<_DriverProfileForm> {
                 },
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Vos catégories seront attribuées par l’administrateur.',
+              Text(
+                widget.existing == null
+                    ? 'Vos catégories seront attribuées par l’administrateur.'
+                    : 'Vos catégories restent gérées par l’administrateur.',
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
@@ -352,7 +424,11 @@ class _DriverProfileFormState extends State<_DriverProfileForm> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Enregistrer mon profil'),
+                    : Text(
+                        widget.existing == null
+                            ? 'Enregistrer mon profil'
+                            : 'Enregistrer les modifications',
+                      ),
               ),
             ],
           ),

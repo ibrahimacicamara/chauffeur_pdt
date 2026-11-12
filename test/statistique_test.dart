@@ -74,7 +74,7 @@ void main() {
       '0,00 EUR',
     );
     expect(find.text('Aucun encaissement à bord enregistré.'), findsOneWidget);
-    expect(find.text('Aucun virement reçu enregistré.'), findsOneWidget);
+    expect(find.text('Aucun paiement enregistré.'), findsOneWidget);
     expect(finance.requestedIds, ['me']);
   });
 
@@ -88,8 +88,9 @@ void main() {
           driverId: 'me',
           status: 'Terminée',
           price: 1000,
-          paymentPlan: 'reservation_fee',
-          checkoutAmountCents: 96997,
+          driverPrice: 800,
+          paymentMethod: 'à bord',
+          paidOnlineCents: 96997,
         ),
         const DriverOrder(id: 'active', driverId: 'me'),
         const DriverOrder(id: 'cancelled', driverId: 'me', status: 'Annulée'),
@@ -109,56 +110,56 @@ void main() {
       ]);
       finance.payments.add([
         DriverPayment(
-          id: '1',
-          type: DriverPaymentType.onboard,
-          amountCents: 1001,
-          receivedAt: date,
-          reference: 'COM-1',
-        ),
-        DriverPayment(
-          id: '2',
-          type: DriverPaymentType.onboard,
-          amountCents: 2002,
-          receivedAt: date,
-        ),
-        DriverPayment(
-          id: '3',
-          type: DriverPaymentType.transfer,
+          id: 'transfer',
+          method: DriverPaymentMethod.transfer,
           amountCents: 45678,
-          receivedAt: date,
-          reference: 'VIR-1',
+          date: date,
+          note: 'VIR-1',
+        ),
+        DriverPayment(
+          id: 'cash',
+          method: DriverPaymentMethod.cash,
+          amountCents: 1234,
+          date: date,
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.text('313,19 EUR'), findsOneWidget);
-      expect(find.text('30,03 EUR'), findsOneWidget);
+      expect(find.text('330,88 EUR'), findsOneWidget);
+      expect(find.text('Montant dû par la société.'), findsOneWidget);
+      expect(find.text('0,00 EUR'), findsWidgets);
       expect(find.text('456,78 EUR'), findsNWidgets(2));
+      expect(find.text('12,34 EUR'), findsNWidgets(2));
+      expect(find.textContaining('Note : VIR-1'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
       expect(find.text('1'), findsNWidgets(2));
       await tester.tap(find.text('Détail du solde'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Gains des courses terminées (80 %) : 800,00 EUR'),
+        find.text('Rémunération des courses terminées : 800,00 EUR'),
         findsOneWidget,
       );
       expect(
-        find.text('Encaissements à bord déduits : -30,03 EUR'),
+        find.text('Encaissements à bord déduits : 0,00 EUR'),
         findsOneWidget,
       );
-      expect(
-        find.text('Virements reçus déduits : -456,78 EUR'),
-        findsOneWidget,
-      );
-      expect(find.text('Solde restant dû : 313,19 EUR'), findsOneWidget);
+      expect(find.text('Virements déduits : -456,78 EUR'), findsOneWidget);
+      expect(find.text('Espèces déduites : -12,34 EUR'), findsOneWidget);
+      expect(find.text('Solde : 330,88 EUR'), findsOneWidget);
       await tester.ensureVisible(find.text('Détail de mes courses'));
       await tester.tap(find.text('Détail de mes courses'));
       await tester.pumpAndSettle();
       expect(find.text('Commande done'), findsNWidgets(2));
-      expect(find.text('Prix total : 1000,00 EUR'), findsOneWidget);
+      expect(
+        find.text('Rémunération chauffeur : 800,00 EUR'),
+        findsNWidgets(2),
+      );
       expect(find.text('Payé en ligne : 969,97 EUR'), findsOneWidget);
-      expect(find.text('Encaissé à bord : 30,03 EUR'), findsOneWidget);
-      expect(find.text('Prix chauffeur : 800,00 EUR'), findsOneWidget);
+      expect(find.text('Encaissé à bord : 0,00 EUR'), findsOneWidget);
+      expect(
+        find.text('Rémunération chauffeur non renseignée'),
+        findsNWidgets(3),
+      );
       expect(find.text('Course incluse dans les gains.'), findsOneWidget);
       expect(find.text('Course non incluse dans les gains.'), findsNWidgets(3));
       expect(find.text('Commande other'), findsNothing);
@@ -166,9 +167,9 @@ void main() {
       finance.payments.add([
         DriverPayment(
           id: 'updated',
-          type: DriverPaymentType.onboard,
+          method: DriverPaymentMethod.cash,
           amountCents: 90000,
-          receivedAt: date,
+          date: date,
         ),
       ]);
       orders.controller.add([
@@ -177,19 +178,21 @@ void main() {
           driverId: 'me',
           status: 'Terminée',
           price: 1000,
-          paymentPlan: 'reservation_fee',
-          checkoutAmountCents: 10000,
+          driverPrice: 800,
+          paymentMethod: 'à bord',
+          paidOnlineCents: 10000,
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.text('-100,00 EUR'), findsOneWidget);
+      expect(find.text('-800,00 EUR'), findsOneWidget);
       expect(find.text('Montant à reverser à la société.'), findsOneWidget);
-      expect(find.text('313,19 EUR'), findsNothing);
-      expect(find.text('Solde restant dû : -100,00 EUR'), findsOneWidget);
+      expect(find.text('300,85 EUR'), findsNothing);
+      expect(find.text('Solde : -800,00 EUR'), findsOneWidget);
       expect(
-        find.text('Encaissements à bord déduits : -900,00 EUR'),
+        find.text('Encaissements à bord déduits : -700,00 EUR'),
         findsOneWidget,
       );
+      expect(find.text('Espèces déduites : -900,00 EUR'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -217,14 +220,15 @@ void main() {
         driverId: 'me',
         status: 'Terminée',
         price: 100,
+        driverPrice: 80,
       ),
     ]);
     finance.payments.add([
       DriverPayment(
         id: 'received',
-        type: DriverPaymentType.transfer,
+        method: DriverPaymentMethod.transfer,
         amountCents: 3500,
-        receivedAt: date,
+        date: date,
       ),
     ]);
     await tester.pumpAndSettle();
@@ -232,7 +236,7 @@ void main() {
   });
 
   testWidgets(
-    'completion deducts the onboard remainder and rejects missing checkout',
+    'completion deducts the onboard remainder with absent paidOnlineCents as zero',
     (tester) async {
       await show(tester);
       finance.payments.add([]);
@@ -241,8 +245,9 @@ void main() {
           id: 'reservation',
           driverId: 'me',
           price: 100,
-          paymentPlan: 'reservation_fee',
-          checkoutAmountCents: 900,
+          driverPrice: 20,
+          paymentMethod: 'à bord',
+          paidOnlineCents: 900,
         ),
       ]);
       await tester.pumpAndSettle();
@@ -256,55 +261,82 @@ void main() {
           driverId: 'me',
           price: 100,
           status: 'Terminée',
-          paymentPlan: 'reservation_fee',
-          checkoutAmountCents: 900,
+          driverPrice: 20,
+          paymentMethod: 'à bord',
+          paidOnlineCents: 900,
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.text('-11,00 EUR'), findsOneWidget);
-      expect(find.text('91,00 EUR'), findsOneWidget);
+      expect(find.text('9,00 EUR'), findsOneWidget);
+      expect(find.text('Rémunération chauffeur : 20,00 EUR'), findsOneWidget);
+      expect(find.text('Rémunération chauffeur : 91,00 EUR'), findsNothing);
       expect(find.text('Payé en ligne : 9,00 EUR'), findsOneWidget);
+      expect(find.text('Encaissé à bord : 11,00 EUR'), findsOneWidget);
       orders.controller.add([
         const DriverOrder(
           id: 'reservation',
           driverId: 'me',
           price: 100,
           status: 'Terminée',
-          paymentPlan: 'reservation_fee',
+          driverPrice: 20,
+          paymentMethod: 'à bord',
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('driver-balance')), findsNothing);
       expect(
-        find.textContaining('checkoutAmountCents manquant ou invalide'),
-        findsNWidgets(2),
+        tester.widget<Text>(find.byKey(const ValueKey('driver-balance'))).data,
+        '0,00 EUR',
       );
+      expect(find.byKey(const ValueKey('provisional-balance')), findsNothing);
+      orders.controller.add([
+        const DriverOrder(
+          id: 'reservation',
+          driverId: 'me',
+          status: 'Terminée',
+          driverPrice: 20,
+          paymentMethod: 'à bord',
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('driver-balance'))).data,
+        '0,00 EUR',
+      );
+      expect(find.byKey(const ValueKey('provisional-balance')), findsNothing);
     },
   );
 
-  testWidgets('invalid or missing course data hides the calculated amount', (
-    tester,
-  ) async {
-    await show(tester);
-    emitEmpty();
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('driver-balance')), findsOneWidget);
-    orders.controller.add([
-      const DriverOrder(id: 'done', driverId: 'me', status: 'Terminée'),
-    ]);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('driver-balance')), findsNothing);
-    expect(find.textContaining('prix manquant ou invalide'), findsNWidgets(2));
-    orders.controller.add([
-      const DriverOrder(id: 'bad', historyError: 'Invalid history'),
-    ]);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('driver-balance')), findsNothing);
-    expect(
-      find.textContaining('Solde indisponible : certaines commandes'),
-      findsNWidgets(2),
-    );
-  });
+  testWidgets(
+    'missing remuneration keeps a provisional signed balance on screen',
+    (tester) async {
+      await show(tester);
+      emitEmpty();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('driver-balance')), findsOneWidget);
+      orders.controller.add([
+        const DriverOrder(id: 'done', driverId: 'me', status: 'Terminée'),
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('driver-balance'))).data,
+        '0,00 EUR',
+      );
+      expect(find.byKey(const ValueKey('provisional-balance')), findsOneWidget);
+      expect(
+        find.textContaining('rémunération chauffeur inconnue'),
+        findsOneWidget,
+      );
+      orders.controller.add([
+        const DriverOrder(id: 'bad', historyError: 'Invalid history'),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('driver-balance')), findsOneWidget);
+      expect(
+        find.textContaining('Commande bad : historique invalide'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'narrow screen and large text remain scrollable without overflow',
@@ -332,7 +364,7 @@ void main() {
       finance.payments.add([]);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('Aucun virement reçu enregistré.'),
+        find.text('Aucun paiement enregistré.'),
         200,
       );
       expect(tester.takeException(), isNull);

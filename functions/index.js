@@ -18,6 +18,7 @@ initializeApp();
 const db = getFirestore();
 Object.assign(exports, require("./client_sessions").register(db));
 Object.assign(exports, require("./tablet_pairing").register(db));
+Object.assign(exports, require("./account_deletion").register(db));
 const availability = require("./driver_availability").register(db);
 Object.assign(exports, availability.functions);
 const followups = require("./reminder_followups").register(

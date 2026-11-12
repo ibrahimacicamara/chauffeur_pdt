@@ -19,6 +19,7 @@ void main() {
       suitcaseNumber: 2,
       precision: 'Client VIP',
       price: 125,
+      driverPrice: 85.5,
       driverId: 'driver-999',
       commandStatus: [
         CommandStatus(
@@ -36,7 +37,17 @@ void main() {
       ],
     );
 
-    final pdfBytes = await OrderPdfService.generateOrderPdf(order);
+    final pdfBytes = await OrderPdfService.generateOrderPdf(
+      order,
+      driver: MyDriver(
+        name: 'Jean Dupont',
+        phone: '+33600000000',
+        categories: const ['eco'],
+        car: 'Mercedes Classe V',
+        available: true,
+        licensePlate: 'AB-123-Ж',
+      ),
+    );
     expect(pdfBytes, isNotEmpty);
     // PDF signature: %PDF-
     expect(pdfBytes.take(5).toList(), [0x25, 0x50, 0x44, 0x46, 0x2D]);
@@ -49,8 +60,8 @@ void main() {
       dotAll: true,
     ).allMatches(raw)) {
       if (!match.group(1)!.contains('/FlateDecode')) continue;
-      final lengthMatch =
-          RegExp(r'/Length\s+(\d+)').firstMatch(match.group(1)!);
+      final lengthMatch = RegExp(r'/Length\s+(\d+)')
+          .firstMatch(match.group(1)!);
       if (lengthMatch == null) continue;
       final length = int.parse(lengthMatch.group(1)!);
       final decoded = ZLibDecoder().convert(
@@ -60,6 +71,9 @@ void main() {
     }
     final content = streams.join('\n');
     expect(content.toLowerCase(), contains('20ac'));
+    // Seule la plaque de test contient ce caractère : sa présence dans la
+    // table ToUnicode prouve que la plaque est imprimée.
+    expect(content.toLowerCase(), contains('<0416>'));
     expect(content, isNot(contains('HISTORIQUE DU SUIVI')));
   });
 }

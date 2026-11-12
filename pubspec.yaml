@@ -1,7 +1,7 @@
 name: chauffeur
 description: "Application Pro du Transport."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.13.5
@@ -31,6 +31,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -40,3 +41,10 @@ flutter:
     - assets/fonts/NotoSans-Bold.ttf
     - assets/fonts/OFL.txt
     - assets/data/monuments_ile_de_france.json
+
+flutter_launcher_icons:
+  image_path: "assets/images/app_icon_chauffeur.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"

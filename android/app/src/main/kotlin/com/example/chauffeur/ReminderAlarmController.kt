@@ -66,6 +66,11 @@ object ReminderAlarmController {
     /** Returns null-free result code: start_requested, fallback_notification or a rejection reason. */
     fun startAlarm(context: Context, spec: ReminderAlarmSpec, source: String): String {
         val app = context.applicationContext
+        if (!PublishedOrderGate.isActiveAssignedCourse(spec.orderId, spec.driverId)) {
+            stop(app, spec.driverId, spec.orderId, spec.generation)
+            Log.i(TAG, "Alarm ${spec.orderId}/${spec.generation} from $source not started: course is not eligible")
+            return "course_not_eligible"
+        }
         val rejection = ReminderAlarmStore.admit(app, spec, now())
         if (rejection != null) {
             Log.i(TAG, "Alarm ${spec.orderId}/${spec.generation} from $source not started: $rejection")
@@ -111,7 +116,11 @@ object ReminderAlarmController {
         val moved = ReminderAlarmStore.silence(app, keys, now())
         for (spec in moved) {
             cancel(app, spec.key, NOTIFICATION_ID_FALLBACK)
-            post(app, spec.key, NOTIFICATION_ID_PENDING, buildPendingNotification(app, spec))
+            if (PublishedOrderGate.isActiveAssignedCourse(spec.orderId, spec.driverId)) {
+                post(app, spec.key, NOTIFICATION_ID_PENDING, buildPendingNotification(app, spec))
+            } else {
+                stop(app, spec.driverId, spec.orderId, spec.generation)
+            }
         }
         refreshService()
         notifyChanged()
@@ -137,7 +146,13 @@ object ReminderAlarmController {
             Log.e(TAG, "Notifications disabled: ${alarms.size} alarm(s) cannot be presented")
             return
         }
-        for (spec in alarms) post(app, spec.key, NOTIFICATION_ID_FALLBACK, buildFallbackNotification(app, spec))
+        for (spec in alarms) {
+            if (PublishedOrderGate.isActiveAssignedCourse(spec.orderId, spec.driverId)) {
+                post(app, spec.key, NOTIFICATION_ID_FALLBACK, buildFallbackNotification(app, spec))
+            } else {
+                stop(app, spec.driverId, spec.orderId, spec.generation)
+            }
+        }
     }
 
     fun cancelFallback(context: Context, alarms: Collection<ReminderAlarmSpec>) {

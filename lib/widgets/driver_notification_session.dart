@@ -122,7 +122,7 @@ class _DriverNotificationSessionState extends State<DriverNotificationSession> {
       if (alarm != null) _openAlarm(alarm);
       final message = await _messaging.getInitialMessage();
       if (!mounted) return;
-      if (message != null) _open(message);
+      if (message != null) await _open(message);
       final settings = await _messaging.getNotificationSettings();
       if (!mounted || _leaving) return;
       await _enable(
@@ -233,8 +233,49 @@ class _DriverNotificationSessionState extends State<DriverNotificationSession> {
             (message.data['generation'] as String).isNotEmpty);
   }
 
-  void _foreground(RemoteMessage message) {
+  Future<bool> _verifyCourseMessage(RemoteMessage message) async {
+    if (!_mine(message)) return false;
+    final type = message.data['type'];
+    try {
+      await _orders.getPublishedOrderForDriver(
+        message.data['orderId'] as String,
+        widget.driverId,
+        allowAvailable: type == 'driver_course',
+        activeOnly:
+            type == 'driver_reminder' ||
+            type == 'driver_reminder_alarm' ||
+            type == 'driver_travel_alert',
+      );
+      return true;
+    } on StateError {
+      return false;
+    } on FirebaseException catch (error) {
+      _showVerificationError(error.code);
+      return false;
+    } catch (error) {
+      debugPrint('Driver course notification verification failed: $error');
+      _showVerificationError(null);
+      return false;
+    }
+  }
+
+  void _showVerificationError(String? code) {
+    if (!mounted || _leaving) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          code == null
+              ? 'Impossible de vérifier la course sur le serveur. Réessayez.'
+              : 'Vérification de la course impossible ($code). Réessayez.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _foreground(RemoteMessage message) async {
     if (!_mine(message)) return;
+    if (!await _verifyCourseMessage(message)) return;
+    if (!mounted || _leaving || !_mine(message)) return;
     final isNewCourse = message.data['type'] == 'driver_course';
     final isAlert = message.data['type'] == 'driver_travel_alert';
     ScaffoldMessenger.of(context).showSnackBar(
@@ -251,7 +292,7 @@ class _DriverNotificationSessionState extends State<DriverNotificationSession> {
         ),
         action: SnackBarAction(
           label: isNewCourse ? 'Voir' : 'Ouvrir',
-          onPressed: () => _open(message),
+          onPressed: () => unawaited(_open(message)),
         ),
       ),
     );
@@ -259,16 +300,24 @@ class _DriverNotificationSessionState extends State<DriverNotificationSession> {
 
   void _openAlarm(ReminderAlarmOpen alarm) {
     if (alarm.action != 'open') return;
-    _open(RemoteMessage(data: {
-      'type': 'driver_reminder_alarm',
-      'orderId': alarm.orderId,
-      'driverId': alarm.driverId,
-      'generation': alarm.generation,
-    }));
+    unawaited(
+      _open(
+        RemoteMessage(
+          data: {
+            'type': 'driver_reminder_alarm',
+            'orderId': alarm.orderId,
+            'driverId': alarm.driverId,
+            'generation': alarm.generation,
+          },
+        ),
+      ),
+    );
   }
 
-  void _open(RemoteMessage message) {
+  Future<void> _open(RemoteMessage message) async {
     if (!_mine(message)) return;
+    if (!await _verifyCourseMessage(message)) return;
+    if (!mounted || _leaving || !_mine(message)) return;
     final isNewCourse = message.data['type'] == 'driver_course';
     final isAlert = message.data['type'] == 'driver_travel_alert';
     final notificationId = isAlert

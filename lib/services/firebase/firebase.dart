@@ -27,6 +27,42 @@ extension DriverOrderStatus on OrderStatus {
   };
 }
 
+/// Modes de paiement reconnus comme « paiement à bord » par l'administrateur
+/// (contrat ADMIN_DRIVER_ACCOUNT_HANDOFF.md), après normalisation
+/// minuscules/accents/séparateurs.
+const Set<String> onboardPaymentMethods = {
+  'a bord',
+  'paiement a bord',
+  'onboard',
+  'on board',
+  'cash on delivery',
+};
+
+String normalizePaymentMethod(String raw) {
+  var value = raw.toLowerCase();
+  const accents = {
+    'à': 'a',
+    'â': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'è': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'î': 'i',
+    'ï': 'i',
+    'ô': 'o',
+    'ö': 'o',
+    'ù': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'ç': 'c',
+  };
+  accents.forEach((accented, plain) {
+    value = value.replaceAll(accented, plain);
+  });
+  return value.replaceAll(RegExp(r'[\s\-_./]+'), ' ').trim();
+}
+
 class DriverOrder {
   const DriverOrder({
     required this.id,
@@ -42,12 +78,15 @@ class DriverOrder {
     this.commandStatus = const [],
     this.historyError,
     this.price,
+    this.driverPrice,
     this.customerEmail,
     this.category,
     this.disposal,
     this.paymentStatus,
+    this.paymentMethod,
+    this.paidOnlineCents,
     this.paymentPlan,
-    this.checkoutAmountCents,
+    this.validatedForDriverAt,
     this.clients = const [],
   }) : _driverId = driverId;
 
@@ -63,43 +102,111 @@ class DriverOrder {
   final String? _driverId;
   final List<CommandStatus> commandStatus;
   final String? historyError;
-  final int? price;
+
+  /// Prix client, en euros.
+  final num? price;
+
+  /// Rémunération chauffeur stockée par l'administrateur, en euros.
+  /// Ne jamais la recalculer avec le pourcentage courant.
+  final num? driverPrice;
   final String? customerEmail;
   final String? category;
   final bool? disposal;
   final String? paymentStatus;
-  final String? paymentPlan;
-  final int? checkoutAmountCents;
 
-  bool get hasOnboardPayment => paymentPlan == 'reservation_fee';
+  /// Mode de paiement client (ex. « à bord », « onboard »).
+  final String? paymentMethod;
+
+  /// Montant payé en ligne, en centimes. Absent vaut zéro.
+  final int? paidOnlineCents;
+
+  /// Ancien marqueur local de paiement à bord, conservé pour les anciennes
+  /// courses ; l'avertissement visuel le prend encore en compte.
+  final String? paymentPlan;
+  final DateTime? validatedForDriverAt;
+  bool get isValidatedForDriver => validatedForDriverAt != null;
+
+  /// Rémunération chauffeur en centimes, dérivée du prix stocké.
+  int? get driverPriceCents {
+    final value = driverPrice;
+    return value == null || !value.isFinite ? null : (value * 100).round();
+  }
+
+  int? get priceCents {
+    final value = price;
+    return value == null || !value.isFinite ? null : (value * 100).round();
+  }
+
+  /// Paiement à bord au sens comptable du contrat administrateur.
+  bool get isOnboardPaymentMethod {
+    final method = paymentMethod;
+    return method != null &&
+        onboardPaymentMethods.contains(normalizePaymentMethod(method));
+  }
+
+  bool get hasOnboardPayment =>
+      isOnboardPaymentMethod || paymentPlan == 'reservation_fee';
   final List<MyClient> clients;
 
+  CommandStatus? get latestHistoryEvent {
+    if (commandStatus.isEmpty) return null;
+    var latest = commandStatus.first;
+    for (final event in commandStatus.skip(1)) {
+      if (!event.date.isBefore(latest.date)) latest = event;
+    }
+    return latest;
+  }
+
   String? get driverId {
-    final reset = commandStatus.lastIndexWhere(
-      (event) => event.status == OrderStatus.PENDING_ASSIGNMENT,
-    );
-    final activeHistory = commandStatus.skip(reset + 1);
-    for (final item in activeHistory) {
-      if (item.status == OrderStatus.ASSIGNED && item.id.trim().isNotEmpty) {
-        return item.id.trim();
-      }
-    }
-    for (final item in activeHistory) {
-      if (item.id.trim().isNotEmpty) {
-        return item.id.trim();
-      }
-    }
-    return reset >= 0 ? null : _driverId;
+    final latest = latestHistoryEvent;
+    if (latest == null) return _driverId;
+    if (latest.status == OrderStatus.PENDING_ASSIGNMENT) return null;
+    final assigned =
+        commandStatus
+            .where(
+              (event) =>
+                  event.status != OrderStatus.PENDING_ASSIGNMENT &&
+                  event.id.trim().isNotEmpty,
+            )
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    return assigned.isEmpty ? null : assigned.last.id.trim();
   }
 
   OrderStatus get currentStatus {
     final error = historyError;
     if (error != null) throw FormatException(error);
-    if (status == 'Terminée') return OrderStatus.COMPLETED;
-    if (status == 'Annulée') return OrderStatus.CANCELLED;
-    if (commandStatus.isNotEmpty &&
-        commandStatus.last.status != OrderStatus.PENDING_ASSIGNMENT) {
-      return commandStatus.last.status;
+    final latest = latestHistoryEvent;
+    if (latest != null) return latest.status;
+    if (status != null) {
+      final normalized = status!
+          .toLowerCase()
+          .replaceAll(RegExp(r'[àâä]'), 'a')
+          .replaceAll(RegExp(r'[éèêë]'), 'e')
+          .replaceAll(RegExp(r'[îï]'), 'i')
+          .replaceAll(RegExp(r'[ôö]'), 'o')
+          .replaceAll(RegExp(r'[ùûü]'), 'u')
+          .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+          .trim();
+      final legacyStatus = switch (normalized) {
+        'en attente' || 'pending' => OrderStatus.PENDING_ASSIGNMENT,
+        'acceptee' || 'accepted' => OrderStatus.ASSIGNED,
+        'en route' || 'en cours' || 'in progress' => OrderStatus.EN_ROUTE,
+        'sur place' => OrderStatus.ON_SITE,
+        'client a bord' => OrderStatus.CLIENT_ON_BOARD,
+        'terminee' || 'completed' => OrderStatus.COMPLETED,
+        'annulee' || 'cancelled' || 'canceled' => OrderStatus.CANCELLED,
+        'client absent' || 'no show' => OrderStatus.NO_SHOW,
+        'interrompue' || 'interrupted' => OrderStatus.INTERRUPTED,
+        _ => null,
+      };
+      if (legacyStatus != null) return legacyStatus;
+      for (final value in OrderStatus.values) {
+        if (value.name.toLowerCase() == normalized.replaceAll(' ', '_')) {
+          return value;
+        }
+      }
+      throw FormatException('Commande $id : statut courant invalide.');
     }
     return driverId == null
         ? OrderStatus.PENDING_ASSIGNMENT
@@ -248,13 +355,18 @@ class DriverOrder {
       driverId: legacyDriverId,
       commandStatus: history,
       historyError: historyError,
-      price: parseNumber('price'),
+      price: field<num>('price'),
+      driverPrice: field<num>('driverPrice'),
       customerEmail: field<String>('customerEmail'),
       category: field<String>('category'),
       disposal: data['disposal'] is bool ? data['disposal'] as bool : null,
       paymentStatus: field<String>('paymentStatus'),
+      paymentMethod: field<String>('paymentMethod'),
+      paidOnlineCents: field<int>('paidOnlineCents'),
       paymentPlan: field<String>('paymentPlan'),
-      checkoutAmountCents: field<int>('checkoutAmountCents'),
+      validatedForDriverAt: data['validatedForDriverAt'] is Timestamp
+          ? (data['validatedForDriverAt'] as Timestamp).toDate()
+          : null,
       clients: parseClients(data['clients']),
     );
   }
@@ -270,20 +382,89 @@ class FireService {
   FirebaseFirestore get _database => firestore ?? FirebaseFirestore.instance;
 
   Stream<DriverOrder?> getOrderStream(String orderId) {
-    return _database.collection('Orders').doc(orderId).snapshots().map((
-      snapshot,
-    ) {
-      final data = snapshot.data();
-      if (data == null) return null;
-      try {
-        return DriverOrder.fromFirestore(snapshot.id, data);
-      } catch (e) {
-        return DriverOrder(
-          id: snapshot.id,
-          historyError: e is FormatException ? e.message : e.toString(),
+    return _database
+        .collection('Orders')
+        .doc(orderId)
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+          if (snapshot.metadata.isFromCache) {
+            throw StateError(
+              'Vérification serveur de la course impossible. Réessayez.',
+            );
+          }
+          final data = snapshot.data();
+          if (data == null) return null;
+          try {
+            return DriverOrder.fromFirestore(snapshot.id, data);
+          } catch (e) {
+            return DriverOrder(
+              id: snapshot.id,
+              historyError: e is FormatException ? e.message : e.toString(),
+            );
+          }
+        });
+  }
+
+  bool _categoryMatches(DriverOrder order, MyDriver driver) {
+    final category = order.category?.trim().toLowerCase();
+    return category != null &&
+        category.isNotEmpty &&
+        driver.categories.any(
+          (allowed) => allowed.trim().toLowerCase() == category,
         );
-      }
-    });
+  }
+
+  bool _isClosed(OrderStatus status) => {
+    OrderStatus.COMPLETED,
+    OrderStatus.CANCELLED,
+    OrderStatus.NO_SHOW,
+    OrderStatus.INTERRUPTED,
+  }.contains(status);
+
+  /// Performs a server-only read before opening a direct link or acting on a
+  /// course. An available course is accepted only while still unassigned and
+  /// pending; an assigned course must still belong to this driver.
+  Future<DriverOrder> getPublishedOrderForDriver(
+    String orderId,
+    String driverId, {
+    bool allowAvailable = false,
+    bool activeOnly = false,
+  }) async {
+    if (orderId.trim().isEmpty || orderId.contains('/')) {
+      throw ArgumentError.value(orderId, 'orderId', 'Identifiant invalide');
+    }
+    final user = (auth ?? FirebaseAuth.instance).currentUser;
+    if (user == null || user.uid != driverId) {
+      throw StateError('Connectez-vous avec le compte chauffeur attendu.');
+    }
+    final profile =
+        await (profileService ?? DriverProfileService(firestore: firestore))
+            .getDriver(driverId);
+    if (profile == null) {
+      throw StateError('Votre profil chauffeur est introuvable.');
+    }
+    final snapshot = await _database
+        .collection('Orders')
+        .doc(orderId)
+        .get(const GetOptions(source: Source.server));
+    final data = snapshot.data();
+    if (data == null) throw StateError('Cette course n’existe plus.');
+    final order = DriverOrder.fromFirestore(snapshot.id, data);
+    if (!order.isValidatedForDriver) {
+      throw StateError('Cette course n’est pas validée pour les chauffeurs.');
+    }
+    if (!_categoryMatches(order, profile)) {
+      throw StateError('Cette course ne correspond pas à vos catégories.');
+    }
+    final status = order.currentStatus;
+    final isAssignedToDriver = order.driverId == driverId;
+    final isAvailable =
+        order.driverId == null && status == OrderStatus.PENDING_ASSIGNMENT;
+    if ((!isAssignedToDriver && !(allowAvailable && isAvailable)) ||
+        (activeOnly && (isAvailable || _isClosed(status)))) {
+      throw StateError('Cette course n’est plus disponible pour vous.');
+    }
+    return order;
   }
 
   Future<void> advanceOrderStatus({
@@ -305,6 +486,12 @@ class FireService {
       throw StateError('La position GPS est invalide. Réessayez.');
     }
     final reference = _database.collection('Orders').doc(orderId);
+    final driverProfile =
+        await (profileService ?? DriverProfileService(firestore: firestore))
+            .getDriver(user.uid);
+    if (driverProfile == null) {
+      throw StateError('Votre profil chauffeur est introuvable.');
+    }
     await _database.runTransaction((transaction) async {
       final snapshot = await transaction.get(reference);
       final data = snapshot.data();
@@ -312,6 +499,14 @@ class FireService {
       final order = DriverOrder.fromFirestore(orderId, data);
       if (order.historyError != null) {
         throw FormatException(order.historyError!);
+      }
+      if (!order.isValidatedForDriver) {
+        throw StateError(
+          'Cette course n’est plus validée pour les chauffeurs.',
+        );
+      }
+      if (!_categoryMatches(order, driverProfile)) {
+        throw StateError('Cette course ne correspond plus à vos catégories.');
       }
       if (order.driverId != user.uid) {
         throw StateError('Cette commande ne vous est pas attribuée.');
@@ -355,11 +550,25 @@ class FireService {
       throw StateError('Connectez-vous pour gérer votre commande.');
     }
     final reference = _database.collection('Orders').doc(orderId);
+    final driverProfile =
+        await (profileService ?? DriverProfileService(firestore: firestore))
+            .getDriver(user.uid);
+    if (driverProfile == null) {
+      throw StateError('Votre profil chauffeur est introuvable.');
+    }
     await _database.runTransaction((transaction) async {
       final snapshot = await transaction.get(reference);
       final data = snapshot.data();
       if (data == null) throw StateError('Cette commande n’existe plus.');
       final order = DriverOrder.fromFirestore(orderId, data);
+      if (!order.isValidatedForDriver) {
+        throw StateError(
+          'Cette course n’est plus validée pour les chauffeurs.',
+        );
+      }
+      if (!_categoryMatches(order, driverProfile)) {
+        throw StateError('Cette course ne correspond plus à vos catégories.');
+      }
       if (order.driverId != user.uid) {
         throw StateError('Cette commande ne vous est plus attribuée.');
       }
@@ -404,13 +613,28 @@ class FireService {
         if (allowed.isEmpty) {
           controller.add([]);
         } else if (current != null) {
-          controller.add(
-            current
-                .where(
-                  (order) => allowed.contains(order.category?.toLowerCase()),
-                )
-                .toList(),
-          );
+          final eligible = <DriverOrder>[];
+          for (final order in current) {
+            if (!order.isValidatedForDriver ||
+                !allowed.contains(order.category?.trim().toLowerCase())) {
+              continue;
+            }
+            if (order.historyError != null) {
+              controller.addError(FormatException(order.historyError!));
+              continue;
+            }
+            try {
+              final status = order.currentStatus;
+              if (order.driverId == driverId ||
+                  (order.driverId == null &&
+                      status == OrderStatus.PENDING_ASSIGNMENT)) {
+                eligible.add(order);
+              }
+            } on FormatException catch (error, stackTrace) {
+              controller.addError(error, stackTrace);
+            }
+          }
+          controller.add(eligible);
         }
       }
 
@@ -458,9 +682,14 @@ class FireService {
   Stream<List<DriverOrder>> getOrdersStream() {
     return _database
         .collection('Orders')
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+          if (snapshot.metadata.isFromCache) {
+            throw StateError(
+              'Vérification serveur des courses impossible. Réessayez.',
+            );
+          }
+          return snapshot.docs.map((doc) {
             try {
               return DriverOrder.fromFirestore(doc.id, doc.data());
             } catch (e) {
@@ -469,8 +698,8 @@ class FireService {
                 historyError: e is FormatException ? e.message : e.toString(),
               );
             }
-          }).toList(),
-        );
+          }).toList();
+        });
   }
 
   Future<void> chooseOrder(
@@ -490,6 +719,12 @@ class FireService {
       throw StateError('La position GPS est invalide. Réessayez.');
     }
     final reference = _database.collection('Orders').doc(orderId);
+    final driverProfile =
+        await (profileService ?? DriverProfileService(firestore: firestore))
+            .getDriver(user.uid);
+    if (driverProfile == null) {
+      throw StateError('Votre profil chauffeur est introuvable.');
+    }
     await _database.runTransaction((transaction) async {
       final snapshot = await transaction.get(reference);
       final data = snapshot.data();
@@ -497,10 +732,21 @@ class FireService {
         throw StateError('Cette commande n’existe plus.');
       }
       final order = DriverOrder.fromFirestore(orderId, data);
+      if (!order.isValidatedForDriver) {
+        throw StateError(
+          'Cette course n’est plus validée pour les chauffeurs.',
+        );
+      }
+      if (!_categoryMatches(order, driverProfile)) {
+        throw StateError('Cette course ne correspond pas à vos catégories.');
+      }
       final assignedDriverId = order.driverId;
       if (assignedDriverId == user.uid) return;
       if (assignedDriverId != null && assignedDriverId.isNotEmpty) {
         throw StateError('Cette commande a déjà été choisie par un chauffeur.');
+      }
+      if (order.currentStatus != OrderStatus.PENDING_ASSIGNMENT) {
+        throw StateError('Cette course n’est plus disponible.');
       }
       final newStatus = CommandStatus(
         date: DateTime.now().toUtc(),

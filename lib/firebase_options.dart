@@ -52,18 +52,18 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDAFa6_UfoM4c80wjXVKVIupdaCTiZAuWI',
-    appId: '1:653739671561:android:26a969fc232412c98278d8',
+    appId: '1:653739671561:android:d821805a9514d3dd8278d8',
     messagingSenderId: '653739671561',
     projectId: 'gestion-bmr',
     storageBucket: 'gestion-bmr.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCKBwXqgdBpE7llBz4i-HWkdA7DsIa3r8Y',
-    appId: '1:653739671561:ios:2689467efb59ddc98278d8',
+    appId: '1:653739671561:ios:7857cefb176f92f18278d8',
     messagingSenderId: '653739671561',
     projectId: 'gestion-bmr',
     storageBucket: 'gestion-bmr.firebasestorage.app',
-    iosBundleId: 'com.example.chauffeur',
+    iosBundleId: 'fr.produtransport.chauffeur',
   );
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCKBwXqgdBpE7llBz4i-HWkdA7DsIa3r8Y',

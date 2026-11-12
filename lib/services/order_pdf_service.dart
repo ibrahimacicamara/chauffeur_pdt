@@ -1,5 +1,8 @@
 import 'package:chauffeur/screens/current_com.dart';
+import 'package:chauffeur/services/firebase/driver_finance.dart';
+import 'package:chauffeur/services/firebase/driver_profile_service.dart';
 import 'package:chauffeur/services/firebase/firebase.dart';
+import 'package:chauffeur/services/hive/hive_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -7,6 +10,14 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class OrderPdfService {
+  static const _legalMentions = [
+    'Exploitant : Camara Ibrahima, entreprise individuelle (EI)',
+    'Adresse : 20 rue Marie Curie, 93400 Saint-Ouen-sur-Seine',
+    "SIREN : 879008563 - N° d'inscription au registre VTC : EVTC093251583",
+    'Contact : 06 98 55 75 67 - 06 68 49 75 52 - contact@produtransport.fr',
+    'Transport de personnes par voiture de transport avec chauffeur (VTC) sur réservation préalable.',
+  ];
+
   static String clean(String? text) {
     if (text == null) return '';
     return text
@@ -21,13 +32,19 @@ class OrderPdfService {
         .replaceAll('\u202F', ' ');
   }
 
-  static Future<Uint8List> generateOrderPdf(DriverOrder order) async {
+  static Future<Uint8List> generateOrderPdf(
+    DriverOrder order, {
+    MyDriver? driver,
+  }) async {
     final logoData = await rootBundle.load(
       'assets/images/pro_du_transport.png',
     );
-    final logo = pw.MemoryImage(logoData.buffer.asUint8List(
-      logoData.offsetInBytes, logoData.lengthInBytes,
-    ));
+    final logo = pw.MemoryImage(
+      logoData.buffer.asUint8List(
+        logoData.offsetInBytes,
+        logoData.lengthInBytes,
+      ),
+    );
     final regular = pw.Font.ttf(
       await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'),
     );
@@ -225,9 +242,11 @@ class OrderPdfService {
         },
         build: (pw.Context context) {
           final isDisposal = order.disposal == true;
-          final currentStatusLabel = clean(order.driverId != null
-              ? order.currentStatus.label
-              : (order.status ?? "En attente d'attribution"));
+          final currentStatusLabel = clean(
+            order.driverId != null
+                ? order.currentStatus.label
+                : (order.status ?? "En attente d'attribution"),
+          );
 
           return [
             // Status and Reference Banner
@@ -301,8 +320,11 @@ class OrderPdfService {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  infoRow('Date & Heure de départ', departureStr,
-                      isHighlight: true),
+                  infoRow(
+                    'Date & Heure de départ',
+                    departureStr,
+                    isHighlight: true,
+                  ),
                   infoRow(
                     'Lieu de prise en charge',
                     order.departureAddress ?? 'Non renseigné',
@@ -352,6 +374,14 @@ class OrderPdfService {
                 children: [
                   if (order.vehicule != null)
                     infoRow('Véhicule demandé', order.vehicule!),
+                  if (driver != null)
+                    infoRow(
+                      "Plaque d'immatriculation",
+                      driver.licensePlate.isEmpty
+                          ? 'Non renseignée'
+                          : driver.licensePlate,
+                      isHighlight: true,
+                    ),
                   if (order.category != null)
                     infoRow('Catégorie', order.category!),
                   infoRow(
@@ -390,10 +420,17 @@ class OrderPdfService {
                   if (order.customerEmail != null &&
                       order.customerEmail!.trim().isNotEmpty)
                     infoRow('Email client', order.customerEmail!),
-                  if (order.price != null)
+                  if (order.driverPriceCents != null)
                     infoRow(
-                      'Tarif TTC de la course',
-                      '${order.price} €',
+                      'Rémunération chauffeur',
+                      formatEuros(order.driverPriceCents!)
+                          .replaceFirst(' EUR', ' €'),
+                      isHighlight: true,
+                    ),
+                  if (order.driverPriceCents == null)
+                    infoRow(
+                      'Rémunération chauffeur',
+                      'Non renseignée',
                       isHighlight: true,
                     ),
                   if (order.paymentStatus != null)
@@ -418,6 +455,17 @@ class OrderPdfService {
                 textAlign: pw.TextAlign.justify,
               ),
             ),
+
+            // Mentions légales
+            sectionTitle('MENTIONS LÉGALES'),
+            for (final mention in _legalMentions)
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 2),
+                child: pw.Text(
+                  clean(mention),
+                  style: pw.TextStyle(fontSize: 7.5, color: textMuted),
+                ),
+              ),
           ];
         },
       ),
@@ -426,8 +474,17 @@ class OrderPdfService {
     return pdf.save();
   }
 
+  static Future<MyDriver?> _assignedDriver(DriverOrder order) async {
+    final driverId = order.driverId;
+    if (driverId == null || driverId.isEmpty) return null;
+    return DriverProfileService().watchDriver(driverId).first;
+  }
+
   static Future<void> downloadPdf(DriverOrder order) async {
-    final bytes = await generateOrderPdf(order);
+    final bytes = await generateOrderPdf(
+      order,
+      driver: await _assignedDriver(order),
+    );
     await Printing.sharePdf(
       bytes: bytes,
       filename: 'bon_de_commande_${order.id}.pdf',
@@ -435,7 +492,10 @@ class OrderPdfService {
   }
 
   static Future<void> previewOrPrintPdf(DriverOrder order) async {
-    final bytes = await generateOrderPdf(order);
+    final bytes = await generateOrderPdf(
+      order,
+      driver: await _assignedDriver(order),
+    );
     await Printing.layoutPdf(
       onLayout: (_) async => bytes,
       name: 'bon_de_commande_${order.id}',
@@ -446,7 +506,7 @@ class OrderPdfService {
     required BuildContext context,
     required DriverOrder order,
     Future<void> Function(BuildContext context, DriverOrder order)?
-        customDownloader,
+    customDownloader,
   }) {
     if (customDownloader != null) {
       customDownloader(context, order);
@@ -461,10 +521,7 @@ class OrderPdfService {
       builder: (modalContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 20,
-              horizontal: 16,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,10 +594,7 @@ class OrderPdfService {
                 ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFFE2E7EC),
-                    child: Icon(
-                      Icons.print_outlined,
-                      color: Color(0xFF142536),
-                    ),
+                    child: Icon(Icons.print_outlined, color: Color(0xFF142536)),
                   ),
                   title: const Text(
                     'Aperçu & Impression',

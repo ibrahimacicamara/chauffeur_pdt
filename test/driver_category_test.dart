@@ -39,15 +39,29 @@ class _Orders extends FireService {
 }
 
 void main() {
+  final validatedAt = DateTime.utc(2026, 11, 7);
   late _Profiles profiles;
   late _Orders service;
-  const orders = [
-    DriverOrder(id: 'berline', category: 'Berline'),
-    DriverOrder(id: 'van', category: 'Van'),
-    DriverOrder(id: 'assigned-van', category: 'Van', driverId: 'driver-1'),
+  final orders = [
+    DriverOrder(
+      id: 'berline',
+      category: 'Berline',
+      validatedForDriverAt: validatedAt,
+    ),
+    DriverOrder(id: 'van', category: 'Van', validatedForDriverAt: validatedAt),
+    DriverOrder(
+      id: 'assigned-van',
+      category: 'Van',
+      driverId: 'driver-1',
+      validatedForDriverAt: validatedAt,
+    ),
     DriverOrder(id: 'missing'),
     DriverOrder(id: 'empty', category: ''),
-    DriverOrder(id: 'case', category: 'berline'),
+    DriverOrder(
+      id: 'case',
+      category: 'berline',
+      validatedForDriverAt: validatedAt,
+    ),
   ];
 
   setUp(() {
@@ -108,6 +122,25 @@ void main() {
     await result;
   });
 
+  test(
+    'malformed statuses emit an error and are not exposed as courses',
+    () async {
+      final result = expectLater(
+        service.getOrdersForDriverStream('driver-1'),
+        emitsError(isA<FormatException>()),
+      );
+      profiles.assign(['Berline']);
+      service.updates.add([
+        DriverOrder.fromFirestore('malformed', {
+          'category': 'Berline',
+          'status': 'unknown',
+          'validatedForDriverAt': Timestamp.fromDate(DateTime.utc(2026, 11, 7)),
+        }),
+      ]);
+      await result;
+    },
+  );
+
   testWidgets(
     'admin changes and new orders immediately update displayed list',
     (tester) async {
@@ -121,8 +154,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(card('van'), findsNothing);
       service.updates.add([
-        const DriverOrder(id: 'new', category: 'Berline'),
-        const DriverOrder(id: 'hidden', category: 'Van'),
+        DriverOrder(
+          id: 'new',
+          category: 'Berline',
+          validatedForDriverAt: validatedAt,
+        ),
+        DriverOrder(
+          id: 'hidden',
+          category: 'Van',
+          validatedForDriverAt: validatedAt,
+        ),
       ]);
       await tester.pumpAndSettle();
       expect(card('berline'), findsNothing);

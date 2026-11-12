@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <application
-        android:label="Pro du Transport"
+        android:label="Chauffeur PDT"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

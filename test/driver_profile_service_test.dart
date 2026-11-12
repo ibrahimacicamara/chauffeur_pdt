@@ -8,6 +8,7 @@ class _Database extends Fake implements FirebaseFirestore {
   GetOptions? options;
   FirebaseException? failure;
   int writes = 0;
+  Map<Object, Object?>? updated;
 
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) =>
@@ -60,6 +61,14 @@ class _Document extends Fake
     database.options = options;
     if (database.failure != null) throw database.failure!;
     return _Snapshot(database.data);
+  }
+
+  @override
+  Future<void> update(Map<Object, Object?> data) async {
+    if (database.failure != null) throw database.failure!;
+    database.writes++;
+    database.updated = data;
+    database.data = {...?database.data, ...data.cast<String, dynamic>()};
   }
 }
 
@@ -175,6 +184,51 @@ void main() {
       expect(driver.licensePlate, isEmpty);
     },
   );
+
+  test('update writes only driver fields and keeps admin fields', () async {
+    final database = _Database()
+      ..data = {
+        'name': 'Jean',
+        'phone': '+33612345678',
+        'car': 'Van',
+        'categories': ['VIP'],
+        'available': false,
+        'remindersEnabled': true,
+      };
+    final service = DriverProfileService(firestore: database);
+    final current = (await service.getDriver('driver-1'))!;
+    final driver = await service.updateProfile(
+      'driver-1',
+      current,
+      name: ' Paul ',
+      phone: '+33 6 00 00 00 00',
+      car: ' Mercedes ',
+      licensePlate: ' ef-456-gh ',
+    );
+    expect(database.updated, {
+      'name': 'Paul',
+      'phone': '+33600000000',
+      'car': 'Mercedes',
+      'licensePlate': 'EF-456-GH',
+    });
+    expect(database.data!['categories'], ['VIP']);
+    expect(database.data!['available'], isFalse);
+    expect(database.data!['remindersEnabled'], isTrue);
+    expect(driver.categories, ['VIP']);
+    expect(driver.available, isFalse);
+    await expectLater(
+      service.updateProfile(
+        'driver-1',
+        current,
+        name: 'Paul',
+        phone: '0600000000',
+        car: 'Mercedes',
+        licensePlate: 'EF-456-GH',
+      ),
+      throwsArgumentError,
+    );
+    expect(database.writes, 1);
+  });
 
   test(
     'invalid input does not write and Firestore failures propagate',

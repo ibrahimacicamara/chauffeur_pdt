@@ -10,6 +10,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
+final _validatedAt = DateTime.utc(2026, 11, 7);
+
+class _PublishedOrder extends DriverOrder {
+  _PublishedOrder({
+    required super.id,
+    super.departureAddress,
+    super.steps = const [],
+    super.status,
+    super.driverId,
+    super.commandStatus = const [],
+    super.clients = const [],
+  }) : super(validatedForDriverAt: _validatedAt);
+}
+
 class _Service extends FireService {
   final order = StreamController<DriverOrder?>.broadcast();
   final requests = <OrderStatus>[];
@@ -30,8 +44,16 @@ class _Service extends FireService {
   Stream<DriverOrder?> getOrderStream(String orderId) => order.stream;
 
   @override
+  Future<DriverOrder> getPublishedOrderForDriver(
+    String orderId,
+    String driverId, {
+    bool allowAvailable = false,
+    bool activeOnly = false,
+  }) async => _PublishedOrder(id: orderId, driverId: driverId);
+
+  @override
   Stream<List<DriverOrder>> getOrdersStream() =>
-      Stream.value([const DriverOrder(id: 'course', driverId: 'driver')]);
+      Stream.value([_PublishedOrder(id: 'course', driverId: 'driver')]);
 
   @override
   Stream<List<DriverOrder>> getOrdersForDriverStream(String driverId) =>
@@ -48,7 +70,7 @@ class _Service extends FireService {
     requests.add(nextStatus);
     position = location;
     order.add(
-      DriverOrder(
+      _PublishedOrder(
         id: orderId,
         driverId: 'driver',
         commandStatus: [
@@ -192,7 +214,7 @@ void main() {
       OrderStatus.ON_SITE,
     ]) {
       service.order.add(
-        DriverOrder(
+        _PublishedOrder(
           id: 'course',
           driverId: 'driver',
           commandStatus: [
@@ -223,7 +245,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Attribution modifiée'), findsOneWidget);
     service.order.add(
-      DriverOrder(
+      _PublishedOrder(
         id: 'course',
         driverId: 'driver',
         commandStatus: [
@@ -276,7 +298,7 @@ void main() {
     service.order.add(null);
     await tester.pumpAndSettle();
     expect(find.text('Cette commande n’existe plus.'), findsOneWidget);
-    service.order.add(const DriverOrder(id: 'course', driverId: 'other'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'other'));
     await tester.pumpAndSettle();
     expect(
       find.text('Cette commande ne vous est pas attribuée.'),
@@ -298,7 +320,7 @@ void main() {
     addTearDown(service.order.close);
     await open(tester, service, location);
     service.order.add(
-      const DriverOrder(
+      _PublishedOrder(
         id: 'course',
         driverId: 'driver',
         departureAddress: 'Paris',
@@ -323,7 +345,7 @@ void main() {
       ..failure = StateError('Autorisez la localisation.');
     addTearDown(service.order.close);
     await open(tester, service, location);
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
     await confirm(tester);
     expect(find.text('Autorisez la localisation.'), findsOneWidget);
@@ -342,7 +364,7 @@ void main() {
     final location = _Location();
     addTearDown(service.order.close);
     await open(tester, service, location);
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
     final button = find.byKey(const ValueKey('advance-status'));
     await tester.ensureVisible(button);
@@ -366,7 +388,7 @@ void main() {
     addTearDown(service.order.close);
     await open(tester, service, _Location());
     service.order.add(
-      const DriverOrder(id: 'course', driverId: 'driver', status: 'Terminée'),
+      _PublishedOrder(id: 'course', driverId: 'driver', status: 'Terminée'),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('advance-status')), findsNothing);
@@ -383,6 +405,7 @@ void main() {
     service.order.add(
       DriverOrder.fromFirestore('bad', {
         'commandStatus': {'status': 'unknown'},
+        'validatedForDriverAt': Timestamp.fromDate(_validatedAt),
       }),
     );
     await tester.pumpAndSettle();
@@ -402,7 +425,7 @@ void main() {
     final location = _Location()..pending = Completer<GPSCoordinates>();
     addTearDown(service.order.close);
     await open(tester, service, location);
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
     final button = find.byKey(const ValueKey('advance-status'));
     await tester.ensureVisible(button);
@@ -433,7 +456,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gérer ma commande'));
     await tester.pump();
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
     expect(find.text('Ma commande'), findsOneWidget);
     expect(find.text('VOTRE MISSION'), findsOneWidget);
@@ -445,7 +468,7 @@ void main() {
     final service = _Service();
     addTearDown(service.order.close);
     await open(tester, service, _Location());
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
 
     final voucherButton = find.byKey(
@@ -461,12 +484,12 @@ void main() {
     final service = _Service();
     addTearDown(service.order.close);
     await open(tester, service, _Location());
-    service.order.add(const DriverOrder(id: 'course', driverId: 'driver'));
+    service.order.add(_PublishedOrder(id: 'course', driverId: 'driver'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('show-client-name-board')), findsNothing);
 
     service.order.add(
-      DriverOrder(
+      _PublishedOrder(
         id: 'course',
         driverId: 'driver',
         clients: [

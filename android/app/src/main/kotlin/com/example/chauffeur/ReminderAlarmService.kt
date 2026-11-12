@@ -42,15 +42,14 @@ class ReminderAlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val alarms = ReminderAlarmStore.activeAlarms(this, System.currentTimeMillis())
         // startForeground must always be called after startForegroundService, even if nothing rings.
-        if (!enterForeground(alarms)) {
+        if (!enterForeground(emptyList())) {
             val app = applicationContext
             ReminderAlarmController.executor.execute { ReminderAlarmController.showFallbackNotifications(app) }
             stopSelf()
             return START_NOT_STICKY
         }
-        sync(alarms)
+        sync()
         return START_NOT_STICKY
     }
 
@@ -83,7 +82,30 @@ class ReminderAlarmService : Service() {
         }
     }
 
-    fun sync() = sync(ReminderAlarmStore.activeAlarms(this, System.currentTimeMillis()))
+    fun sync() {
+        handler.removeCallbacks(tick)
+        val app = applicationContext
+        ReminderAlarmController.executor.execute {
+            val now = System.currentTimeMillis()
+            val alarms = ReminderAlarmStore.activeAlarms(app, now)
+            val eligible = alarms.filter { spec ->
+                if (PublishedOrderGate.isActiveAssignedCourse(spec.orderId, spec.driverId)) {
+                    true
+                } else {
+                    ReminderAlarmController.stop(
+                        app,
+                        spec.driverId,
+                        spec.orderId,
+                        spec.generation,
+                    )
+                    false
+                }
+            }
+            ReminderAlarmController.mainHandler.post {
+                if (instance === this) sync(eligible)
+            }
+        }
+    }
 
     private fun sync(alarms: List<ReminderAlarmSpec>) {
         handler.removeCallbacks(tick)
@@ -122,7 +144,10 @@ class ReminderAlarmService : Service() {
             stopPlayback()
         }
         alarms.filter { it.alarmNotBefore > now }.minOfOrNull { it.alarmNotBefore }?.let { next = minOf(next, it) }
-        handler.postDelayed(tick, (next - now + 50).coerceAtLeast(1000L))
+        handler.postDelayed(
+            tick,
+            minOf(next - now + 50, 30_000L).coerceAtLeast(1000L),
+        )
     }
 
     private fun soundCandidates(): List<Uri> {

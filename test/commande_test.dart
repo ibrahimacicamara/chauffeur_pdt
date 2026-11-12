@@ -23,6 +23,14 @@ class _Service extends FireService {
       orders.stream;
 
   @override
+  Future<DriverOrder> getPublishedOrderForDriver(
+    String orderId,
+    String driverId, {
+    bool allowAvailable = false,
+    bool activeOnly = false,
+  }) async => _PublishedOrder(id: orderId, driverId: driverId);
+
+  @override
   Future<void> chooseOrder(
     String orderId, {
     required GPSCoordinates location,
@@ -31,6 +39,27 @@ class _Service extends FireService {
     lastLocation = location;
     await result?.future;
   }
+}
+
+final _validatedAt = DateTime.utc(2026, 11, 7);
+
+class _PublishedOrder extends DriverOrder {
+  _PublishedOrder({
+    required super.id,
+    super.departureAddress,
+    super.departureDate,
+    super.steps = const [],
+    super.vehicule,
+    super.personNumber,
+    super.suitcaseNumber,
+    super.precision,
+    super.status,
+    super.driverId,
+    super.price,
+    super.driverPrice,
+    super.category,
+    super.paymentPlan,
+  }) : super(validatedForDriverAt: _validatedAt);
 }
 
 class _Location extends LocationService {
@@ -59,7 +88,18 @@ class _Auth extends Fake implements FirebaseAuth {
 // These are test doubles only; production uses Firestore's document objects.
 // ignore: subtype_of_sealed_class
 class _Reference extends Fake
-    implements DocumentReference<Map<String, dynamic>> {}
+    implements DocumentReference<Map<String, dynamic>> {
+  @override
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async => _Snapshot({
+    'name': 'Chauffeur test',
+    'phone': '+33612345678',
+    'categories': ['berline', 'eco', 'van'],
+    'car': 'Berline',
+    'available': true,
+  });
+}
 
 // ignore: subtype_of_sealed_class
 class _Collection extends Fake
@@ -113,8 +153,11 @@ class _Firestore extends Fake implements FirebaseFirestore {
 
   @override
   CollectionReference<Map<String, dynamic>> collection(String collectionPath) {
-    this.collectionPath = collectionPath;
-    return orders;
+    if (collectionPath == 'Orders') {
+      this.collectionPath = collectionPath;
+      return orders;
+    }
+    return _Collection();
   }
 
   @override
@@ -130,11 +173,16 @@ class _Firestore extends Fake implements FirebaseFirestore {
 
 void main() {
   final position = GPSCoordinates(latitude: 48.8566, longitude: 2.3522);
+  final publication = {
+    'category': 'berline',
+    'validatedForDriverAt': Timestamp.fromDate(DateTime.utc(2026, 11, 7)),
+  };
 
   test(
     'Release preserves history, removes ownership and allows reassignment',
     () async {
       final values = <String, dynamic>{
+        ...publication,
         'driverId': 'driver',
         'commandStatus': [
           {
@@ -166,6 +214,7 @@ void main() {
     'Release rejects foreign drivers and courses with client on board',
     () async {
       final values = <String, dynamic>{
+        ...publication,
         'driverId': 'driver',
         'commandStatus': [
           {
@@ -192,6 +241,7 @@ void main() {
 
   test('Appends GPS history and advances only to the next stage', () async {
     final values = <String, dynamic>{
+      ...publication,
       'status': 'Acceptée',
       'commandStatus': <Map<String, dynamic>>[
         {
@@ -244,6 +294,7 @@ void main() {
     'Rejects another driver, stale stages, jumps and finished courses',
     () async {
       final values = <String, dynamic>{
+        ...publication,
         'commandStatus': [
           {
             'status': 'OrderStatus.ASSIGNED',
@@ -289,6 +340,7 @@ void main() {
     'Rejects invalid GPS and histories without modifying the document',
     () async {
       final values = <String, dynamic>{
+        ...publication,
         'commandStatus': [
           {
             'status': 'OrderStatus.ASSIGNED',
@@ -332,7 +384,7 @@ void main() {
   test(
     'Reserves the document and appends ASSIGNED status with driver ID and GPS',
     () async {
-      final values = <String, dynamic>{'status': 'En attente'};
+      final values = <String, dynamic>{...publication, 'status': 'En attente'};
       final database = _Firestore(values);
       await FireService(
         firestore: database,
@@ -365,7 +417,7 @@ void main() {
   );
 
   test('Rejects a second driver and allows an idempotent retry', () async {
-    final values = <String, dynamic>{};
+    final values = <String, dynamic>{...publication};
     final database = _Firestore(values);
     final first = FireService(firestore: database, auth: _Auth(_User('first')));
     await first.chooseOrder('course', location: position);
@@ -387,6 +439,7 @@ void main() {
     'Rejects second driver when assignment exists only in commandStatus',
     () async {
       final values = <String, dynamic>{
+        ...publication,
         'commandStatus': [
           {
             'status': 'OrderStatus.ASSIGNED',
@@ -533,7 +586,7 @@ void main() {
         ),
       );
       service.orders.add([
-        const DriverOrder(
+        _PublishedOrder(
           id: 'aboard',
           price: 100,
           paymentPlan: 'reservation_fee',
@@ -575,19 +628,17 @@ void main() {
       ),
     );
     for (final values in [
-      (100, '100,00 EUR', '20,00 EUR', '80,00 EUR'),
-      (19, '19,00 EUR', '3,80 EUR', '15,20 EUR'),
-      (0, '0,00 EUR', '0,00 EUR', '0,00 EUR'),
+      (100, '100,00 EUR', 80, '80,00 EUR'),
+      (19, '19,00 EUR', 15.2, '15,20 EUR'),
+      (0, '0,00 EUR', 0, '0,00 EUR'),
     ]) {
-      service.orders.add([DriverOrder(id: 'fare', price: values.$1)]);
+      service.orders.add([
+        _PublishedOrder(id: 'fare', price: values.$1, driverPrice: values.$3),
+      ]);
       await tester.pumpAndSettle();
       expect(find.text('Prix de la course : ${values.$2}'), findsNothing);
-      expect(
-        find.text('Commission société (20 %) : ${values.$3}'),
-        findsNothing,
-      );
       expect(find.text(values.$4.replaceFirst(' EUR', ' €')), findsOneWidget);
-      expect(find.textContaining('Prix chauffeur'), findsNothing);
+      expect(find.textContaining('Commission société'), findsNothing);
       expect(find.textContaining('Après commission'), findsNothing);
       expect(
         tester
@@ -596,13 +647,15 @@ void main() {
         isNotNull,
       );
     }
-    service.orders.add([const DriverOrder(id: 'fare')]);
+    service.orders.add([_PublishedOrder(id: 'fare')]);
     await tester.pumpAndSettle();
-    expect(find.text('Prix non renseigné'), findsOneWidget);
-    expect(find.textContaining('Prix chauffeur'), findsNothing);
-    service.orders.add([const DriverOrder(id: 'fare', price: -10)]);
+    expect(find.text('Rémunération chauffeur non renseignée'), findsOneWidget);
+    service.orders.add([_PublishedOrder(id: 'fare', driverPrice: -10)]);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Prix invalide'), findsOneWidget);
+    expect(
+      find.textContaining('Rémunération chauffeur invalide'),
+      findsOneWidget,
+    );
     expect(find.textContaining('Commission société'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -622,7 +675,7 @@ void main() {
       ),
     );
     service.orders.add([
-      DriverOrder(
+      _PublishedOrder(
         id: 'compact',
         departureAddress: 'Paris',
         departureDate: DateTime(2026, 10, 12, 10),
@@ -633,6 +686,7 @@ void main() {
         category: 'berline',
         status: 'pending',
         price: 100,
+        driverPrice: 80,
       ),
     ]);
     await tester.pumpAndSettle();
@@ -681,11 +735,12 @@ void main() {
       );
       for (final vehicle in [null, '', '   ']) {
         service.orders.add([
-          DriverOrder(
+          _PublishedOrder(
             id: 'category',
             vehicule: vehicle,
             category: 'eco',
             price: 100,
+            driverPrice: 80,
             personNumber: 2,
             suitcaseNumber: 1,
           ),
@@ -726,7 +781,7 @@ void main() {
       const address =
           'Une adresse de départ très longue pour vérifier le retour à la ligne';
       service.orders.add([
-        const DriverOrder(
+        _PublishedOrder(
           id: 'long-order-identifier-without-truncation',
           driverId: 'driver-1',
           departureAddress: address,
@@ -736,6 +791,7 @@ void main() {
           suitcaseNumber: 8,
           precision: 'Instructions importantes pour le chauffeur',
           price: 123,
+          driverPrice: 123,
           paymentPlan: 'reservation_fee',
         ),
       ]);
@@ -779,7 +835,7 @@ void main() {
         ),
       ),
     );
-    service.orders.add([const DriverOrder(id: 'course-1')]);
+    service.orders.add([_PublishedOrder(id: 'course-1')]);
     await tester.pumpAndSettle();
     final button = find.byKey(const ValueKey('choose-course-1'));
     await tester.ensureVisible(button);
@@ -812,7 +868,7 @@ void main() {
         ),
       ),
     );
-    service.orders.add([const DriverOrder(id: 'course-1')]);
+    service.orders.add([_PublishedOrder(id: 'course-1')]);
     await tester.pumpAndSettle();
     final button = find.byKey(const ValueKey('choose-course-1'));
     await tester.ensureVisible(button);
@@ -839,9 +895,9 @@ void main() {
         ),
       );
       service.orders.add([
-        const DriverOrder(id: 'mine', driverId: 'driver-1'),
-        const DriverOrder(id: 'other', driverId: 'driver-2'),
-        const DriverOrder(id: 'available'),
+        _PublishedOrder(id: 'mine', driverId: 'driver-1'),
+        _PublishedOrder(id: 'other', driverId: 'driver-2'),
+        _PublishedOrder(id: 'available'),
       ]);
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('choose-mine')), findsNothing);
@@ -857,9 +913,7 @@ void main() {
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
       expect(find.byKey(const ValueKey('order-card-other')), findsNothing);
       expect(find.byKey(const ValueKey('order-card-available')), findsNothing);
-      service.orders.add([
-        const DriverOrder(id: 'other', driverId: 'driver-2'),
-      ]);
+      service.orders.add([_PublishedOrder(id: 'other', driverId: 'driver-2')]);
       await tester.pumpAndSettle();
       expect(
         find.text('Aucune course attribuée pour le moment.'),
@@ -964,7 +1018,7 @@ void main() {
         ),
       );
 
-      const testOrder = DriverOrder(
+      final testOrder = _PublishedOrder(
         id: 'cmd-voucher-test',
         driverId: 'driver-1',
         departureAddress: '10 Place du Capitole 31000 Toulouse',

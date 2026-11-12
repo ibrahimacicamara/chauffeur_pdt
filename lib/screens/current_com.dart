@@ -38,7 +38,8 @@ class CurrentCommandePage extends StatefulWidget {
   State<CurrentCommandePage> createState() => _CurrentCommandePageState();
 }
 
-class _CurrentCommandePageState extends State<CurrentCommandePage> {
+class _CurrentCommandePageState extends State<CurrentCommandePage>
+    with WidgetsBindingObserver {
   static const _navy = Color(0xFF142536);
   static const _gold = Color(0xFFD5B477);
   static const _stages = [
@@ -51,18 +52,89 @@ class _CurrentCommandePageState extends State<CurrentCommandePage> {
   late Stream<DriverOrder?> _order;
   late LocationService _location;
   var _busy = false;
+  var _verifiedOnServer = false;
+  var _verifyingOnServer = true;
+  String? _verificationError;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _order = widget.service.getOrderStream(widget.orderId);
     _location = widget.locationService ?? LocationService();
+    _verifyOnServer();
+  }
+
+  @override
+  void didUpdateWidget(covariant CurrentCommandePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.orderId != widget.orderId ||
+        oldWidget.driverId != widget.driverId ||
+        oldWidget.service != widget.service) {
+      _order = widget.service.getOrderStream(widget.orderId);
+      _verifiedOnServer = false;
+      _verifyingOnServer = true;
+      _verifyOnServer();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _verifyOnServer();
+  }
+
+  Future<void> _verifyOnServer() async {
+    if (!mounted) return;
+    setState(() {
+      _verifyingOnServer = true;
+      _verificationError = null;
+    });
+    try {
+      await widget.service.getPublishedOrderForDriver(
+        widget.orderId,
+        widget.driverId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _verifiedOnServer = true;
+        _verifyingOnServer = false;
+      });
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _verifiedOnServer = false;
+        _verifyingOnServer = false;
+        _verificationError =
+            'Vérification serveur impossible (${error.code}). Réessayez.';
+      });
+    } on StateError catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _verifiedOnServer = false;
+        _verifyingOnServer = false;
+        _verificationError = error.message;
+      });
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _verifiedOnServer = false;
+        _verifyingOnServer = false;
+        _verificationError = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _verifiedOnServer = false;
+        _verifyingOnServer = false;
+        _verificationError = 'Vérification serveur impossible. Réessayez.';
+      });
+    }
   }
 
   Future<void> _advance(DriverOrder order) async {
     final next = order.currentStatus.next;
-    if (_busy || next == null) return;
+    if (_busy || !_verifiedOnServer || next == null) return;
     setState(() => _busy = true);
     try {
       final confirmed = await showDialog<bool>(
@@ -137,7 +209,7 @@ class _CurrentCommandePageState extends State<CurrentCommandePage> {
   }
 
   Future<void> _release(DriverOrder order) async {
-    if (_busy) return;
+    if (_busy || !_verifiedOnServer) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -583,6 +655,12 @@ class _CurrentCommandePageState extends State<CurrentCommandePage> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF5F7F9),
     appBar: AppBar(
@@ -627,9 +705,38 @@ class _CurrentCommandePageState extends State<CurrentCommandePage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+        if (_verifyingOnServer) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!_verifiedOnServer) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _verificationError ??
+                        'Cette course ne peut pas être vérifiée.',
+                    textAlign: TextAlign.center,
+                  ),
+                  TextButton(
+                    onPressed: _verifyOnServer,
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         final order = snapshot.data;
         if (order == null) {
           return const Center(child: Text('Cette commande n’existe plus.'));
+        }
+        if (!order.isValidatedForDriver) {
+          return const Center(
+            child: Text('Cette course n’est plus validée pour les chauffeurs.'),
+          );
         }
         if (order.historyError != null) {
           return Center(

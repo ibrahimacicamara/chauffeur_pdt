@@ -1,5 +1,7 @@
+import 'package:chauffeur/screens/driver_profile.dart';
 import 'package:chauffeur/services/firebase/driver_profile_service.dart';
 import 'package:chauffeur/services/hive/hive_database.dart';
+import 'package:chauffeur/widgets/delete_account_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -221,7 +223,22 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                key: const ValueKey('driver-profile-edit'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => DriverProfileEditPage(
+                      driverId: widget.driverId,
+                      driver: driver,
+                      service: _service,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Modifier mon profil'),
+              ),
+              const SizedBox(height: 16),
               _section(
                 title: 'Informations personnelles',
                 icon: Icons.person_outline,
@@ -309,6 +326,8 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
+              const DeleteAccountButton(),
             ],
           ),
         ),

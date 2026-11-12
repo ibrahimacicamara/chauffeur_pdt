@@ -75,11 +75,27 @@ class _CommandePageState extends State<CommandePage> {
   }
 
   Future<void> _downloadVoucher(DriverOrder order) async {
-    if (widget.onDownloadVoucher != null) {
-      await widget.onDownloadVoucher!(context, order);
-      return;
+    try {
+      final verified = await _service.getPublishedOrderForDriver(
+        order.id,
+        widget.driverId,
+      );
+      if (!mounted) return;
+      if (widget.onDownloadVoucher != null) {
+        await widget.onDownloadVoucher!(context, verified);
+        return;
+      }
+      OrderPdfService.showDownloadModal(
+        context: context,
+        order: verified,
+      );
+    } on StateError catch (error) {
+      _message(error.message);
+    } on FirebaseException catch (error) {
+      _message('Vérification de la course impossible (${error.code}).');
+    } catch (error) {
+      _message('Impossible de vérifier la course : $error');
     }
-    OrderPdfService.showDownloadModal(context: context, order: order);
   }
 
   Future<void> _choose(DriverOrder order) async {
@@ -99,8 +115,11 @@ class _CommandePageState extends State<CommandePage> {
             ? 'Vous n’avez pas l’autorisation de choisir cette commande.'
             : 'Attribution impossible (${error.code}). Réessayez.',
       );
-    } catch (_) {
-      _message('Impossible de récupérer la position GPS. Réessayez.');
+    } on FormatException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message('Attribution impossible. Vérifiez la connexion puis réessayez.');
+      debugPrint('Course attribution failed: $error');
     } finally {
       if (mounted) setState(() => _pending.remove(order.id));
     }
@@ -364,27 +383,27 @@ class _CommandePageState extends State<CommandePage> {
   }
 
   Widget _fare(DriverOrder order, {bool compact = false}) {
-    final price = order.price;
-    if (price == null) {
+    final driverPriceCents = order.driverPriceCents;
+    if (driverPriceCents == null) {
       return compact
-          ? const Text('Prix non renseigné')
-          : _detail(Icons.payments_outlined, 'Prix non renseigné');
+          ? const Text('Rémunération chauffeur non renseignée')
+          : _detail(
+              Icons.payments_outlined,
+              'Rémunération chauffeur non renseignée',
+            );
     }
-    if (price < 0) {
+    if (driverPriceCents < 0) {
       if (compact) {
-        return const Text(
-          'Prix invalide : le montant de la course ne peut pas être négatif.',
-        );
+        return const Text('Rémunération chauffeur invalide.');
       }
       return _detail(
         Icons.warning_amber_outlined,
-        'Prix invalide : le montant de la course ne peut pas être négatif.',
+        'Rémunération chauffeur invalide.',
       );
     }
-    final driverCents = price * 80;
     if (compact) {
       return Text(
-        formatEuros(driverCents).replaceFirst(' EUR', ' €'),
+        formatEuros(driverPriceCents).replaceFirst(' EUR', ' €'),
         style: const TextStyle(
           color: Color(0xFF226C47),
           fontWeight: FontWeight.w700,
@@ -401,7 +420,7 @@ class _CommandePageState extends State<CommandePage> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        'Prix chauffeur : ${formatEuros(driverCents)}',
+        'Prix chauffeur : ${formatEuros(driverPriceCents)}',
         style: const TextStyle(
           color: Color(0xFF226C47),
           fontWeight: FontWeight.w700,
@@ -440,9 +459,11 @@ class _CommandePageState extends State<CommandePage> {
           IconButton(
             tooltip: 'Tablettes associées',
             icon: const Icon(Icons.tablet_android),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => TabletManagementPage(driverId: widget.driverId),
-            )),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => TabletManagementPage(driverId: widget.driverId),
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Mon profil',
@@ -481,9 +502,11 @@ class _CommandePageState extends State<CommandePage> {
       floatingActionButton: FloatingActionButton(
         key: const ValueKey('client-conversation-fab'),
         tooltip: 'Conversation client',
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => ClientConversationPage(driverId: widget.driverId),
-        )),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ClientConversationPage(driverId: widget.driverId),
+          ),
+        ),
         child: const Icon(Icons.forum_outlined),
       ),
       body: StreamBuilder<List<DriverOrder>>(

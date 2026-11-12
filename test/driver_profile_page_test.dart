@@ -12,12 +12,33 @@ import 'package:flutter_test/flutter_test.dart';
 class _Profiles extends DriverProfileService {
   final profiles = StreamController<MyDriver?>.broadcast();
   final requests = <String>[];
+  MyDriver? updated;
 
   @override
   Stream<MyDriver?> watchDriver(String uid) {
     requests.add(uid);
     return profiles.stream;
   }
+
+  @override
+  Future<List<String>> getCarNames() async => [];
+
+  @override
+  Future<MyDriver> updateProfile(
+    String uid,
+    MyDriver current, {
+    required String name,
+    required String phone,
+    required String car,
+    required String licensePlate,
+  }) async => updated = MyDriver(
+    name: name,
+    phone: phone,
+    car: car,
+    categories: current.categories,
+    available: current.available,
+    licensePlate: licensePlate,
+  );
 }
 
 class _Orders extends FireService {
@@ -86,6 +107,31 @@ void main() {
       );
     },
   );
+
+  testWidgets('edits the profile from prefilled fields and returns', (
+    tester,
+  ) async {
+    await open(tester);
+    service.profiles.add(_driver());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('driver-profile-edit')));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'AB-123-CD'), findsWidgets);
+    await tester.enterText(
+      find.byKey(const ValueKey('driver-license-plate')),
+      'EF-456-GH',
+    );
+    final save = find.text('Enregistrer les modifications');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(service.updated!.licensePlate, 'EF-456-GH');
+    expect(service.updated!.name, 'Jean Dupont');
+    expect(service.updated!.categories, ['eco', 'VIP']);
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.text('Profil mis à jour.'), findsOneWidget);
+  });
 
   testWidgets('handles missing profile and Firestore errors with retry', (
     tester,

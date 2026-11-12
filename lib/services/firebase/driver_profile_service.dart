@@ -58,6 +58,46 @@ class DriverProfileService {
       categories: ["eco"],
       available: true,
     );
+    _validate(driver);
+    final reference = _driver(uid);
+    return _database.runTransaction((transaction) async {
+      final snapshot = await transaction.get(reference);
+      final existing = snapshot.data();
+      if (existing != null) return MyDriver.fromJson(existing);
+      transaction.set(reference, MyDriver.toJson(driver));
+      return driver;
+    });
+  }
+
+  // N'écrit que les champs modifiables par le chauffeur : les catégories, la
+  // disponibilité et les champs d'administration restent intacts.
+  Future<MyDriver> updateProfile(
+    String uid,
+    MyDriver current, {
+    required String name,
+    required String phone,
+    required String car,
+    required String licensePlate,
+  }) async {
+    final driver = MyDriver(
+      name: name.trim(),
+      phone: phone.replaceAll(RegExp(r'[\s().-]'), ''),
+      car: car.trim(),
+      licensePlate: licensePlate.trim().toUpperCase(),
+      categories: current.categories,
+      available: current.available,
+    );
+    _validate(driver);
+    await _driver(uid).update({
+      'name': driver.name,
+      'phone': driver.phone,
+      'car': driver.car,
+      'licensePlate': driver.licensePlate,
+    });
+    return driver;
+  }
+
+  void _validate(MyDriver driver) {
     if (driver.name.isEmpty || driver.car.isEmpty) {
       throw ArgumentError('Le nom et le véhicule sont obligatoires.');
     }
@@ -67,13 +107,5 @@ class DriverProfileService {
     if (driver.licensePlate.isEmpty) {
       throw ArgumentError('La plaque d’immatriculation est obligatoire.');
     }
-    final reference = _driver(uid);
-    return _database.runTransaction((transaction) async {
-      final snapshot = await transaction.get(reference);
-      final existing = snapshot.data();
-      if (existing != null) return MyDriver.fromJson(existing);
-      transaction.set(reference, MyDriver.toJson(driver));
-      return driver;
-    });
   }
 }
